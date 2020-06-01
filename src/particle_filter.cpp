@@ -32,7 +32,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
    */
 
   if (!initialized()) {
-    num_particles = 100;  // TODO: Set the number of particles
+    num_particles = 100;  // Set the number of particles
     particles.resize(num_particles);
 
     // Gausian normal distributions
@@ -40,7 +40,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
     std::normal_distribution<double> dist_y(y, std[1]);
     std::normal_distribution<double> dist_theta(theta, std[2]);
 
-    // TODO: Add random Gaussian noise to each particle
+    // Add random Gaussian noise to each particle
     std::default_random_engine gen; //initializing randon engine
 
     for (int i = 0; i < num_particles; i++) {
@@ -74,7 +74,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
   std::default_random_engine gen; //initializing randon engine
 
 
-  for (int i = 0; i < particles.size(); i++) {
+  for (uint i = 0; i < particles.size(); i++) {
     // Convert from car coordinates to map coordinates using equation xxxx
     particles[i].x += velocity * cos(particles[i].theta) * delta_t;
     particles[i].y += velocity * sin(particles[i].theta) * delta_t;
@@ -101,16 +101,19 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted,
    */
 
 
-  double dist2_value, min_value_dist2;
-  for (int i = 0; i < observations.size(); i++) { 
+  double dist2_value, min_value_dist2, distx, disty;
+  for (uint i = 0; i < observations.size(); i++) { 
 	// processing each observation
 
     min_value_dist2 = std::numeric_limits<double>::infinity(); // setting as infinity
 
-    for (int j = 0; j < predicted.size(); j++) {
+    for (uint j = 0; j < predicted.size(); j++) {
 	// processing each prediction
-      dist2_value = dist2(observations[i].x, observations[i].y, predicted[j].x,
-                     predicted[j].y);
+      
+      distx = observations[i].x - predicted[j].x;
+      disty = observations[i].y - predicted[j].y;
+
+      dist2_value = distx * distx + disty * disty;	
 
       if (dist2_value < min_value_dist2) {
         min_value_dist2 = dist2_value;
@@ -140,7 +143,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
    *   (look at equation 3.33) http://planning.cs.uiuc.edu/node99.html
    */
 
-  double diff_x, diff_y;
+  double diff_x, diff_y, cos_theta, sin_theta;
   
   double gauss_norm =  1 / (2 * M_PI * std_landmark[0] * std_landmark[1]);
   double varx = 2 * pow(std_landmark[0], 2);
@@ -155,17 +158,20 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     vector<LandmarkObs> observations_; // creating object for converted observations
     observations_.resize(observations.size());
     
+    cos_theta = cos(particles[i].theta);
+    sin_theta = sin(particles[i].theta);
+
     // Converting to corresponding map coordinates with formula
-    for (int j = 0; j < observations.size(); j++) {
+    for (uint j = 0; j < observations.size(); j++) {
       observations_[j].id = j;
-      observations_[j].x = particles[i].x + cos(particles[i].theta) * observations[j].x - sin(particles[i].theta)* observations[j].y;
-      observations_[j].y = particles[i].y + sin(particles[i].theta) * observations[j].x + cos(particles[i].theta) * observations[j].y;
+      observations_[j].x = particles[i].x + cos_theta * observations[j].x - sin_theta* observations[j].y;
+      observations_[j].y = particles[i].y + sin_theta * observations[j].x + cos_theta * observations[j].y;
     }
 
     
     // considering particles which are in the range
     vector<LandmarkObs> observable_landmarks;
-    for (int j = 0; j < map_landmarks.landmark_list.size(); j++) {
+    for (uint j = 0; j < map_landmarks.landmark_list.size(); j++) {
       
       if ((fabs((particles[i].x - map_landmarks.landmark_list[j].x_f)) <= sensor_range) && (fabs((particles[i].y - map_landmarks.landmark_list[j].y_f)) <= sensor_range))
 	{
@@ -178,8 +184,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
     // Compute the weight for each particle
     particles[i].weight = 1.0;
-    for (int j = 0; j < observations_.size(); j++) {
-      for (int k = 0; k < observable_landmarks.size(); k++) {
+    for (uint j = 0; j < observations_.size(); j++) {
+      for (uint k = 0; k < observable_landmarks.size(); k++) {
         if (observations_[j].id == observable_landmarks[k].id) {
           diff_x = observable_landmarks[k].x - observations_[j].x;
           diff_y = observable_landmarks[k].y - observations_[j].y;
@@ -193,7 +199,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
  // Normalizing weights
 
-  for (int i = 0; i < particles.size(); i++) {
+  for (uint i = 0; i < particles.size(); i++) {
     particles[i].weight /= weight_sum;
   }
 
@@ -216,7 +222,7 @@ void ParticleFilter::resample() {
   //finding maximum weight 
   double weight_max = 0;
   
-  for (int i = 0; i < particles.size(); i++) {
+  for (uint i = 0; i < particles.size(); i++) {
     if (particles[i].weight > weight_max) {
       weight_max = particles[i].weight;
     }
@@ -238,9 +244,9 @@ void ParticleFilter::resample() {
       beta -= particles[idx].weight;
       idx = (idx + 1) % num_particles;
     }
-    resampled_particles[i] = particles[idx];
+    particles_[i] = particles[idx];
   }
-  particles = resampled_particles;
+  particles = particles_;
 
 
 }
